@@ -185,6 +185,7 @@ options:
   -t THRESHOLD_DB, --threshold THRESHOLD_DB
                         Threshold in dB
   -w, --write           Record (write) channels to disk
+  --audio-rate          Audio sampling rate for written audio files (E.g 48000)
   -F FREQUENCY_FILE_NAME, --frequencies FREQUENCY_FILE_NAME
                         YAML file containing frequencies and ranges in Mhz
   --disable-lockout     Disable locking out of channels
