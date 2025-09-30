@@ -3,6 +3,7 @@
 """
 
 from gnuradio import gr  # type: ignore
+from gnuradio import blocks
 from asyncio import Task
 import time
 import numpy as np
@@ -36,6 +37,9 @@ class BaseTuner(gr.hier_block2):
         self.file_name: str | None = None
         self.log_task: Task | None = None
         self.center_freq: int
+        self.record: bool
+        self.freq_xlating_fir_filter_ccc: gr.hier_block2
+        self.blocks_wavfile_sink: gr.hier_block2
 
     def set_last_heard(self, a_time: float) -> None:
         self.last_heard = a_time
@@ -86,7 +90,9 @@ class BaseTuner(gr.hier_block2):
             self.set_file_name(rf_center_freq)
 
         if (self.file_name is not None and self.record):
-            self.blocks_wavfile_sink.open(self.file_name)
+            self.blocks_wavfile_sink = blocks.wavfile_sink(
+                self.file_name, 1, int(self.audio_rate), int(self.audio_bps)
+            )
 
         if self.center_freq != 0:
             await self.notify_scanner(ChannelMessage(state='on',

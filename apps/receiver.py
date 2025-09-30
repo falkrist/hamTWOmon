@@ -7,7 +7,6 @@ Created on Fri Jul  3 13:38:36 2015
 """
 
 from gnuradio import gr  # type: ignore
-import osmosdr  # type: ignore
 from gnuradio import blocks
 from gnuradio import fft
 from gnuradio.fft import window  # type: ignore
@@ -19,6 +18,13 @@ import time
 import numpy as np
 import logging
 from typing import Callable
+
+try:
+    import osmosdr  # type: ignore
+except ImportError as e:
+    raise RuntimeError(
+    ) from e
+
 
 from demodulators.NBFM import TunerDemodNBFM
 from demodulators.AM import TunerDemodAM
@@ -95,8 +101,8 @@ class Receiver(gr.top_block):
                 raise Exception(msg)
 
         # Get the sample rate and center frequency from the hardware
-        self.samp_rate = self.src.get_sample_rate()
-        self.center_freq = self.src.get_center_freq()
+        self.samp_rate = int(self.src.get_sample_rate())
+        self.center_freq = int(self.src.get_center_freq())
 
         # Set the I/Q bandwidth to 80 % of sample rate
         self.src.set_bandwidth(0.8 * self.samp_rate)
@@ -144,7 +150,7 @@ class Receiver(gr.top_block):
         try:
           classifier = Classifier(classifier_params, audio_rate)
         except ClassificationNotWanted:
-            classifier = None   
+            classifier = None
         except Exception as error:
             msg = f'Could not create classifier ({error})'
             logging.error(msg)
@@ -183,14 +189,17 @@ class Receiver(gr.top_block):
 
         if play:
             # Create an adder
-            add_ff = blocks.add_ff(1)
+            add_ff = blocks.add_ff(vlen=num_demod)
 
             # Connect the demodulators between the source and adder
             for idx, demodulator in enumerate(self.demodulators):
                 self.connect(self.src, demodulator, (add_ff, idx))
 
             # Audio sink
-            audio_sink = audio.sink(self.audio_rate)
+            try:
+                audio_sink = audio.sink(self.audio_rate)
+            except TypeError:
+                audio_sink = audio.sink(self.audio_rate, '', True) # Old API for GR < 3.9
 
             # Connect the summed outputs to the audio sink
             self.connect(add_ff, audio_sink)
@@ -211,7 +220,7 @@ class Receiver(gr.top_block):
 
         # Update center frequency with hardware center frequency
         # Do this to account for slight hardware offsets
-        self.center_freq = self.src.get_center_freq()
+        self.center_freq = int(self.src.get_center_freq())
 
     def get_gain_names(self) -> list[dict]:
         """Get the list of supported gain elements
@@ -334,7 +343,7 @@ async def main():
         print(f'Opened channel {msg.channel-1}')  # channel is a 1 based representation of the demod
     
     receiver = Receiver(ask_samp_rate, num_demod, type_demod, hw_args,
-                        freq_correction, record, play, audio_bps,
+                        freq_correction, record, play, audio_bps, 48000,
                         min_recording, classifier_params, print_to_screen, agc)
 
     # Start the receiver and wait for samples to accumulate
@@ -364,7 +373,7 @@ async def main():
     # Tune demodulators to baseband channels
     # If recording on, this creates empty wav file since manually tuning.
     for idx, demodulator in enumerate(receiver.demodulators):
-        await demodulator.set_center_freq(channels[idx], center_freq)
+        await demodulator.set_center_freq(int(channels[idx]), center_freq)
 
     # Print demodulator info
     for idx, channel in enumerate(channels):

@@ -109,12 +109,10 @@ class Classifier(object):
 
         spectrogram = tf.abs(spectrogram)
 
-        spectro: tf.Tensor = []
-        spectro.append(spectrogram.numpy())
-        # logging.debug(f'{spectro =}')
-        spectro = np.expand_dims(spectro, axis=-1) # TODO:  what is this dimension for?
-        # logging.debug(f' after: {spectro =}')
-
+        spectro = spectrogram.numpy().astype(np.float32)
+        spectro = np.expand_dims(spectro, axis=0)   # batch
+        spectro = np.expand_dims(spectro, axis=-1)  # channel
+        
         return spectro
 
     def decode_audio(self, audio_binary: tf.Tensor) -> tf.Tensor:

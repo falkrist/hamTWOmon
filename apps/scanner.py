@@ -217,8 +217,7 @@ class Scanner(object):
             else:
                 demodulator.set_last_heard(the_now)
 
-            # Stop any long running modulators
-            if self.max_recording > 0:
+            if self.max_recording > 0 and getattr(demodulator, 'time_stamp', None):
                 if time.time() - demodulator.time_stamp >= self.max_recording:
                     # clear the demodulator to reset file
                     await demodulator.set_center_freq(0, self.center_freq)
@@ -466,7 +465,7 @@ async def main() -> None:
     scanner = Scanner(ask_samp_rate, num_demod, type_demod, hw_args,
                         freq_correction, record, frequency_configuration,
                         channel_log_params, play,
-                        audio_bps, channel_spacing, frequency_params,
+                        audio_bps, 48000, channel_spacing, frequency_params,
                         min_recording, max_recording,
                         classifier_params)
 

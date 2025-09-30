@@ -785,7 +785,8 @@ class RxWindow(object):
             # build up frequency from 1-9 and '.'
             self.freq_entry = self.freq_entry + chr(keyb)
             return False
-        elif keyb == curses.KEY_BACKSPACE:
+
+        elif keyb in (curses.KEY_BACKSPACE, 127, 8):
             self.freq_entry = self.freq_entry[:-1]
             return False
         else:

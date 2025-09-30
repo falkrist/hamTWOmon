@@ -8,6 +8,7 @@ from gnuradio.fft import window  # type: ignore
 from gnuradio import analog
 from gnuradio.filter import pfb  # type: ignore
 from gnuradio import blocks
+from gnuradio import audio
 from typing import Callable
 
 from demodulators.BaseTuner import BaseTuner
@@ -137,18 +138,8 @@ class TunerDemodNBFM(BaseTuner):
 
         # Connect the blocks for recording
         if (self.record):
-            if self.audio_bps == 16:
-                wav_format = blocks.FORMAT_PCM_16
-            elif self.audio_bps == 8:
-                wav_format = blocks.FORMAT_PCM_08
-            else:
-                wav_format = blocks.FORMAT_PCM_16
-
-            self.blocks_wavfile_sink = blocks.wavfile_sink('/dev/null', 1,
-                                                       audio_rate,
-                                                       blocks.FORMAT_WAV,
-                                                       wav_format,
-                                                       False)
+            self.blocks_wavfile_sink = blocks.wavfile_sink('/dev/null', 1, audio_rate, 16)
+            self.blocks_wavfile_sink.close()
             self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff)
             self.connect(analog_pwr_squelch_ff, self.blocks_wavfile_sink)
         else:
@@ -164,4 +155,3 @@ class TunerDemodNBFM(BaseTuner):
         """
         gain = self.quad_demod_gain * 10**(volume_db/20.0)
         self.analog_quadrature_demod_cf.set_gain(gain)
-
