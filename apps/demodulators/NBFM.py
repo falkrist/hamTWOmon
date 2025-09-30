@@ -137,8 +137,13 @@ class TunerDemodNBFM(BaseTuner):
 
         # Connect the blocks for recording
         if (self.record):
-            # [ВИПРАВЛЕНО] Використовуємо audio.wavfile_sink та новий, спрощений API
-            self.blocks_wavfile_sink = audio.wavfile_sink('/dev/null', 1, audio_rate, audio_bps)
+            self.blocks_wavfile_sink = blocks.wavfile_sink(
+                '/dev/null',          # filename
+                1,                    # n_channels
+                int(audio_rate),
+                blocks.FORMAT_WAV,
+                blocks.FORMAT_PCM_16
+            )
             self.blocks_wavfile_sink.close()
             self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff, self.blocks_wavfile_sink)
         else:
