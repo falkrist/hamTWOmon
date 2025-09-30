@@ -4,6 +4,7 @@
 
 from gnuradio import gr  # type: ignore
 from gnuradio import blocks
+from gnuradio import audio
 from asyncio import Task
 import time
 import numpy as np

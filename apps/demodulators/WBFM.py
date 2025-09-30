@@ -7,7 +7,7 @@ from gnuradio import filter as grfilter # Don't redefine Python's filter()
 from gnuradio.fft import window  # type: ignore
 from gnuradio import analog
 from gnuradio.filter import pfb  # type: ignore
-from gnuradio import blocks
+from gnuradio import blocks, audio
 import ctcss_tones as ct
 import logging
 from typing import Callable
@@ -151,24 +151,13 @@ class TunerDemodWBFM(BaseTuner):
 
         # Connect the blocks for recording
         if (self.record):
-            if self.audio_bps == 16:
-                wav_format = blocks.FORMAT_PCM_16
-            elif self.audio_bps == 8:
-                wav_format = blocks.FORMAT_PCM_08
-            else:
-                wav_format = blocks.FORMAT_PCM_16
-
-            self.blocks_wavfile_sink = blocks.wavfile_sink('/dev/null', 1,
-                                                       audio_rate,
-                                                       blocks.FORMAT_WAV,
-                                                       wav_format,
-                                                       False)
-            self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff)
-            self.connect(analog_pwr_squelch_ff, self.blocks_wavfile_sink)
+            # [ВИПРАВЛЕНО] Використовуємо audio.wavfile_sink та новий, спрощений API
+            self.blocks_wavfile_sink = audio.wavfile_sink('/dev/null', 1, audio_rate, audio_bps)
+            self.blocks_wavfile_sink.close()
+            self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff, self.blocks_wavfile_sink)
         else:
             null_sink1 = blocks.null_sink(gr.sizeof_float)
-            self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff)
-            self.connect(analog_pwr_squelch_ff, null_sink1)
+            self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff, null_sink1)
 
     def set_volume(self, volume_db):
         """Sets the volume

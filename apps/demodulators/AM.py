@@ -7,7 +7,7 @@ from gnuradio import filter as grfilter # Don't redefine Python's filter()
 from gnuradio.fft import window  # type: ignore
 from gnuradio import analog
 from gnuradio.filter import pfb  # type: ignore
-from gnuradio import blocks
+from gnuradio import blocks, audio
 from typing import Callable
 
 from demodulators.BaseTuner import BaseTuner
@@ -35,7 +35,7 @@ class TunerDemodAM(BaseTuner):
     This results in a constant 8 ksps, irrespective of RF sample rate
     This 8 ksps audio stream may be added to other demod streams
     The audio is run through an additional blocking squelch at -200 dB
-    This stops the sample flow so squelced audio is not recorded to file
+    This stops the sample flow so squelched audio is not recorded to file
     The wav file sink stores 8-bit samples (default/grainy quality but compact)
     Default demodulator center frequency is 0 Hz
     This is desired since hardware DC removal reduces sensitivity at 0 Hz
@@ -70,6 +70,7 @@ class TunerDemodAM(BaseTuner):
         self.quad_demod_gain = 0.050
         self.file_name = None
         self.record = record
+        self.agc_ref = 1.0
 
         # Decimation values for four stages of decimation
         decims = (5, int(samp_rate/1E6))
@@ -140,24 +141,13 @@ class TunerDemodAM(BaseTuner):
 
         # Connect the blocks for recording
         if (self.record):
-            if self.audio_bps == 16:
-                wav_format = blocks.FORMAT_PCM_16
-            elif self.audio_bps == 8:
-                wav_format = blocks.FORMAT_PCM_08
-            else:
-                wav_format = blocks.FORMAT_PCM_16
-
-            self.blocks_wavfile_sink = blocks.wavfile_sink('/dev/null', 1,
-                                                       audio_rate,
-                                                       blocks.FORMAT_WAV,
-                                                       wav_format,
-                                                       False)
-            self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff)
-            self.connect(analog_pwr_squelch_ff, self.blocks_wavfile_sink)
+            # [ВИПРАВЛЕНО] Використовуємо audio.wavfile_sink та новий, спрощений API
+            self.blocks_wavfile_sink = audio.wavfile_sink('/dev/null', 1, audio_rate, audio_bps)
+            self.blocks_wavfile_sink.close()
+            self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff, self.blocks_wavfile_sink)
         else:
             null_sink1 = blocks.null_sink(gr.sizeof_float)
-            self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff)
-            self.connect(analog_pwr_squelch_ff, null_sink1)
+            self.connect(pfb_arb_resampler_fff, analog_pwr_squelch_ff, null_sink1)
 
     def set_volume(self, volume_db: int) -> None:
         """Sets the volume
@@ -167,4 +157,3 @@ class TunerDemodAM(BaseTuner):
         """
         agc_ref = self.agc_ref * 10**(volume_db/20.0)
         self.agc3_cc.set_reference(agc_ref)
-
